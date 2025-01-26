@@ -19,6 +19,10 @@ from matplotlib.cm import get_cmap
 from matplotlib.colors import to_hex
 import requests
 import warnings
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+import seaborn as sns
+
 warnings.filterwarnings("ignore", category=UserWarning)
 warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
 
@@ -329,7 +333,7 @@ def create_chart_1(df_ghg):
             markersize=6
         )
         ax.set_yscale('log')
-        plt.title("Chart 1: Evolution of GHG Emissions (Euro Area, EU27, and World)", fontsize=20, fontweight='bold', fontname='Arial')
+        plt.title("Chart 1: Evolution of GHG Emissions (Euro Area, European Union, and World)", fontsize=20, fontweight='bold', fontname='Arial')
         plt.xlabel("Year", fontsize=14, fontname='Arial')
         plt.ylabel("GHG Emissions (MtCO₂e)", fontsize=14, fontname='Arial')
         plt.xticks(fontsize=12, fontname='Arial')
@@ -442,14 +446,6 @@ def create_chart_2(aggregated_data):
         print(f"Error creating Chart 2: {e}")
         return None
 
-import matplotlib.cm as cm
-import matplotlib.colors as mcolors
-from matplotlib.colors import to_hex
-import seaborn as sns
-
-from matplotlib.colors import to_hex
-import matplotlib.cm as cm
-
 def plot_stacked_bar_chart():
     # Read the GHG data
     ghg_data = read_ghg_continents()
@@ -487,53 +483,44 @@ def plot_stacked_bar_chart():
     # Create a DataFrame for the stacked bar chart
     stacked_data = pd.DataFrame(continent_data).fillna(0).T
 
-    # Calculate total emissions per continent and order them
-    continent_totals = stacked_data.sum(axis=1)
-    continent_percentages = (continent_totals / continent_totals.sum() * 100).sort_values(ascending=False)
-    stacked_data = stacked_data.loc[continent_percentages.index]  # Reorder continents
-
-    # Sort countries within each continent by their emissions
-    for continent in stacked_data.index:
-        stacked_data.loc[continent] = stacked_data.loc[continent].sort_values(ascending=False)
+    # Sort countries globally by their total emissions
+    total_emissions_per_country = stacked_data.sum(axis=0).sort_values(ascending=False)
+    stacked_data = stacked_data[total_emissions_per_country.index]  # Reorder columns globally
 
     # Define the number of countries
     num_countries = len(stacked_data.columns)
-    
+
     # Combine multiple professional palettes dynamically
-    # Start with tab10, and add colors from other palettes if needed
-    base_palette = [plt.cm.tab20b(i / 20) for i in range(20)]  # Tab20 has 20 distinct colors
-    if num_countries > len(base_palette):  # Extend the palette if more countries are needed
-        base_palette.extend([plt.cm.tab20(i / 20) for i in range(20)])  # Add Tab20 colors
-    
-    # Limit the palette to the number of countries needed
+    base_palette = [plt.cm.tab20(i / 20) for i in range(20)]
+    if num_countries > len(base_palette):
+        base_palette.extend([plt.cm.tab20b(i / 20) for i in range(20)])
+
     palette_for_countries = base_palette[:num_countries]
-    
-    # Convert colors to HEX for uniformity
     country_colors = [to_hex(color) for color in palette_for_countries]
-    
-    # Map each country to a unique color
     color_map = {country: color for country, color in zip(stacked_data.columns, country_colors)}
-    
+
     # Adjust the figure size and layout
     fig, ax = plt.subplots(figsize=(16, 14))
-    
+
     # Set grey background
-    fig.patch.set_facecolor('#E8E8E8')  # Figure background
-    ax.set_facecolor('#E8E8E8')         # Plot background
+    fig.patch.set_facecolor('#E8E8E8')
+    ax.set_facecolor('#E8E8E8')
 
     # Plot the data with unique colors for each country
     for country in stacked_data.columns:
         ax.bar(
-            stacked_data.index, 
-            stacked_data[country], 
-            label=country, 
-            color=color_map[country], 
-            width=0.8, 
+            stacked_data.index,
+            stacked_data[country],
+            label=country,
+            color=color_map[country],
+            width=0.8,
             bottom=stacked_data.loc[:, :country].sum(axis=1) - stacked_data[country]
         )
+
     # Add space above the bars
     max_emission = stacked_data.sum(axis=1).max()
     ax.set_ylim(0, max_emission * 1.1)
+
     # Title and labels
     ax.set_title('Chart 3: Global GHG Emissions by Country and Continent (2023)', fontsize=18, fontweight='bold')
     ax.set_ylabel('GHG Emissions (Million Tonnes of CO2 Equivalent)', fontsize=14)
@@ -544,51 +531,45 @@ def plot_stacked_bar_chart():
     # Create a hierarchical legend
     legend_elements = []
     for continent in stacked_data.index:
-        percentage = continent_percentages[continent]
-        # Add a "continent header" with percentage to the legend
+        percentage = (stacked_data.loc[continent].sum() / stacked_data.sum().sum()) * 100
         legend_elements.append(Patch(facecolor='none', edgecolor='none', label=f"{continent} ({percentage:.1f}%)"))
-        for country in stacked_data.loc[continent].sort_values(ascending=False).index:
-            if stacked_data.loc[continent, country] > 0:  # Include only countries with emissions
+        for country in stacked_data.columns:
+            if stacked_data.loc[continent, country] > 0:
                 legend_elements.append(
                     Patch(facecolor=color_map[country], edgecolor='black', label=f"  - {country}")
                 )
-    
-    # Add the custom hierarchical legend
+
     legend = ax.legend(
         handles=legend_elements,
         title='Countries by Continent',
-        bbox_to_anchor=(1.05, 1),  # Position legend outside the plot
+        bbox_to_anchor=(1.05, 1),
         loc='upper left',
-        fontsize=12,  # Increased font size for better readability
+        fontsize=12,
         frameon=True
     )
-    
-    # Set legend background color to match the chart
-    legend.get_frame().set_facecolor('#E8E8E8')  # Match the grey background
-    legend.get_frame().set_edgecolor('black')    # Optional: Add a border for clarity
-    
-    # Optionally increase the title font size
+
+    legend.get_frame().set_facecolor('#E8E8E8')
+    legend.get_frame().set_edgecolor('black')
     legend.set_title('Countries by Continent', prop={'size': 14})
 
-    plt.subplots_adjust(bottom=0.3)  # Increased bottom margin for space after the note
-    
+    plt.subplots_adjust(bottom=0.3)
+
     # Footnote
-    fig.text(0.5, 0.02, 
+    fig.text(0.5, 0.02,
              "Note: Only countries contributing ≥0.5% to global emissions are displayed.",
              ha='center', fontsize=12, style='italic')
 
-    # Make sure layout fits all elements (note, legend, etc.)
     plt.tight_layout(rect=[0, 0.05, 1, 1])
 
-    # === SAVE THE CHART IN D:\GHG\charts ===
     charts_path = os.path.join(base_path, "charts")
-    os.makedirs(charts_path, exist_ok=True)  # Ensure the directory exists
+    os.makedirs(charts_path, exist_ok=True)
 
     output_file = os.path.join(charts_path, "Chart_3.png")
     plt.savefig(output_file, dpi=300, facecolor=fig.get_facecolor())
     plt.close()
-    
+
     print(f"Chart 3 saved to '{output_file}'.")
+
 
 
 
