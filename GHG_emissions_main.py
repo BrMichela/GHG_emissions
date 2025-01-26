@@ -335,7 +335,7 @@ def create_chart_1(df_ghg):
         ax.set_yscale('log')
         plt.title("Chart 1: Evolution of GHG Emissions (Euro Area, European Union, and World)", fontsize=20, fontweight='bold', fontname='Arial')
         plt.xlabel("Year", fontsize=14, fontname='Arial')
-        plt.ylabel("GHG Emissions (MtCO₂e)", fontsize=14, fontname='Arial')
+        plt.ylabel("GHG Emissions (MtCO2e)", fontsize=14, fontname='Arial')
         plt.xticks(fontsize=12, fontname='Arial')
         plt.yticks(fontsize=12, fontname='Arial')
         plt.grid(True, linestyle='--', alpha=0.6)
@@ -417,7 +417,7 @@ def create_chart_2(aggregated_data):
         plt.title('Chart 2: GHG Emissions per Capita Over Time by Income Group',
                   fontsize=20, fontweight='bold', fontname='Arial')
         plt.xlabel('Year', fontsize=14, fontname='Arial')
-        plt.ylabel('Average GHG Emissions per Capita (CO₂e)', fontsize=14, fontname='Arial')
+        plt.ylabel('Average GHG Emissions per Capita (CO2e)', fontsize=14, fontname='Arial')
 
         # Use a log scale if desired
         plt.yscale('log')
@@ -569,9 +569,6 @@ def plot_stacked_bar_chart():
     plt.close()
 
     print(f"Chart 3 saved to '{output_file}'.")
-
-
-
 
 # =============================================================================
 # 4. MAIN EXECUTION
