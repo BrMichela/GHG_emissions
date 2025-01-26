@@ -18,6 +18,9 @@ from matplotlib.patches import Patch
 from matplotlib.cm import get_cmap
 from matplotlib.colors import to_hex
 import requests
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=pd.errors.SettingWithCopyWarning)
 
 
 # =============================================================================
@@ -63,6 +66,7 @@ options.add_experimental_option(
 options.add_argument("--disable-gpu")
 options.add_argument("--disable-software-rasterizer")
 
+
 def download_ghg_file():
     """
     Downloads the GHG data file for the current year if it does not already exist.
@@ -100,7 +104,6 @@ def download_ghg_file():
         if browser is not None:
             browser.quit()
 
-
 def download_class_file():
     """
     Automates the download of the World Bank CLASS.xlsx file if it does not already exist.
@@ -126,19 +129,27 @@ def download_class_file():
         download_link = browser.find_element("xpath", download_link_xpath)
 
         # Click the download link
+        print("Clicking download link...")
         download_link.click()
-        print("Download initiated. Please wait for the file to save to the configured download directory.")
 
-        # Wait for the download to complete
-        import time
-        time.sleep(15)  # Adjust based on file size or network speed
+        # Wait for the file to appear in the directory
+        def wait_for_file(file_path, timeout=30):
+            import time
+            start_time = time.time()
+            while not os.path.exists(file_path):
+                if time.time() - start_time > timeout:
+                    raise FileNotFoundError(f"Timeout: {file_path} was not created.")
+                time.sleep(1)
+            print(f"File found: {file_path}")
+
+        wait_for_file(file_path)
+
         print(f"CLASS.xlsx file downloaded successfully and saved to {file_path}.")
     except Exception as e:
         print(f"An error occurred while downloading the CLASS.xlsx file: {e}")
     finally:
         if browser is not None:
             browser.quit()
-
 
 def read_world_bank_data():
     """
@@ -268,7 +279,7 @@ def read_countries_by_continent(csv_path):
 # 3. CHART FUNCTIONS
 # =============================================================================
 
-def create_chart_1(data):
+def create_chart_1(df_ghg):
     try:
         # Define country groups
         euro_area = [
@@ -277,20 +288,19 @@ def create_chart_1(data):
             "Luxembourg", "Malta", "Netherlands", "Portugal", "Slovakia",
             "Slovenia", "Spain", "Croatia"
         ]
-        european_union = euro_area + [
-            "Bulgaria", "Czechia", "Denmark", "Hungary", "Poland", "Romania", "Sweden"
-        ]
         
         # Assign region labels
-        data["Region"] = data["Country"].apply(
+        df_ghg["Region"] = df_ghg["Country"].apply(
             lambda x: "Euro area" if x in euro_area else (
-                "EU27" if x in european_union else "World"
+                "European Union" if x == "EU27" else (
+                    "World" if x == "GLOBAL TOTAL" else None
+                )
             )
         )
         
         # Melt data
-        year_columns = data.columns[2:]
-        data_melted = data.melt(
+        year_columns = df_ghg.columns[2:]
+        data_melted = df_ghg.melt(
             id_vars=["Country", "Region"],
             var_name="Year",
             value_name="GHG Emissions"
@@ -578,7 +588,7 @@ def plot_stacked_bar_chart():
     plt.savefig(output_file, dpi=300, facecolor=fig.get_facecolor())
     plt.close()
     
-    print(f"Chart with proper spacing saved as '{output_file}'.")
+    print(f"Chart 3 saved to '{output_file}'.")
 
 
 
